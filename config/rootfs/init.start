@@ -1,0 +1,7 @@
+#!/bin/sh
+
+##############################
+# Set up wifi
+##############################
+wpa_passphrase 'WIFI_SSID' 'WIFI_PASSWORD' > /etc/wpa_supplicant/wpa_supplicant.conf
+wpa_supplicant -Dnl80211 -iwlan0 -c/etc/wpa_supplicant/wpa_supplicant.conf -B
