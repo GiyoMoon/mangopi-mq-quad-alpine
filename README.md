@@ -37,7 +37,7 @@ Not everything works yet. I'm trying to do/fix everything on this list.
   - [ ] Get the act LED working
 - [ ] Get SSH working
 - [ ] Fix filesystem
-  - [ ] Correctly mount partition 1 to `/boot`
+  - [x] Correctly mount partition 1 to `/boot`
   - [ ] Make partition 2 take up full SD card space
 - [ ] Make sure that Alpine runs in diskless mode
 

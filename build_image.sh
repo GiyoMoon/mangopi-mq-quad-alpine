@@ -49,6 +49,8 @@ sed -i 's/# CONFIG_RTL8723DS is not set/CONFIG_RTL8723DS=m/g' .config
 sed -i 's/# CONFIG_CFG80211 is not set/CONFIG_CFG80211=m/g' .config
 sed -i 's/# CONFIG_RFKILL is not set/CONFIG_RFKILL=m/g' .config
 sed -i 's/# CONFIG_IPV6 is not set/CONFIG_IPV6=m/g' .config
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(( $(nproc) * 2 )) Image dtbs modules
 cd ..
 
