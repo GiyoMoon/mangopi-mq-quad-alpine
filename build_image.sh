@@ -47,16 +47,51 @@ sed -i '/source "drivers\/net\/wireless\/realtek\/rtw89\/Kconfig"/a source "driv
 cp ../../config/linux/sun50i-h616-mangopi-mq-quad.dts arch/arm64/boot/dts/allwinner/
 echo "dtb-\$(CONFIG_ARCH_SUNXI) += sun50i-h616-mangopi-mq-quad.dtb" >> ./arch/arm64/boot/dts/allwinner/Makefile
 
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
-# Disable all modules except rtl8723ds
-sed -i -e '/=m/ s/^/# /; s/=m/ is not set/g' .config
-sed -i 's/# CONFIG_RTL8723DS is not set/CONFIG_RTL8723DS=m/g' .config
-sed -i 's/# CONFIG_CFG80211 is not set/CONFIG_CFG80211=m/g' .config
-sed -i 's/# CONFIG_RFKILL is not set/CONFIG_RFKILL=m/g' .config
-sed -i 's/# CONFIG_IPV6 is not set/CONFIG_IPV6=m/g' .config
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+# Start minimal config
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- tinyconfig
 
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(( $(nproc) * 2 )) Image dtbs modules
+sed -i 's/# CONFIG_MODULES is not set/CONFIG_MODULES=y/g' .config
+# sed -i 's/# CONFIG_MODULE_UNLOAD is not set/CONFIG_MODULE_UNLOAD=y/g' .config
+sed -i 's/# CONFIG_TTY is not set/CONFIG_TTY=y/g' .config
+sed -i 's/# CONFIG_PRINTK is not set/CONFIG_PRINTK=y/g' .config
+sed -i 's/# CONFIG_BINFMT_ELF is not set/CONFIG_BINFMT_ELF=y/g' .config
+sed -i 's/# CONFIG_PROC_FS is not set/CONFIG_PROC_FS=y/g' .config
+
+# Enable RTL8723DS
+echo "CONFIG_NETDEVICES=y" >> .config
+echo "CONFIG_WLAN=y" >> .config
+echo "CONFIG_WLAN_VENDOR_REALTEK=y" >> .config
+echo "CONFIG_RTL8723DS=m" >> .config
+
+# Enable CFG80211 (RTL8723DS dependency)
+sed -i 's/# CONFIG_NET is not set/CONFIG_NET=y/g' .config
+echo "CONFIG_RFKILL=m" >> .config
+echo "CONFIG_WIRELESS=y" >> .config
+echo "CONFIG_CFG80211=m" >> .config
+
+# Enable IPV6
+echo "CONFIG_INET=y" >> .config
+echo "CONFIG_IPV6=m" >> .config
+
+sed -i 's/# CONFIG_MMC is not set/CONFIG_MMC=m/g' .config
+
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+# End minimal config
+
+# If you want to only exclude unused modules:
+# # Start default config
+# make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+# # Disable all modules except rtl8723ds
+# sed -i -e '/=m/ s/^/# /; s/=m/ is not set/g' .config
+# sed -i 's/# CONFIG_RTL8723DS is not set/CONFIG_RTL8723DS=m/g' .config
+# sed -i 's/# CONFIG_CFG80211 is not set/CONFIG_CFG80211=m/g' .config
+# sed -i 's/# CONFIG_RFKILL is not set/CONFIG_RFKILL=m/g' .config
+# sed -i 's/# CONFIG_IPV6 is not set/CONFIG_IPV6=m/g' .config
+# make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+# # End default config
+
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(( $(nproc) * 2 )) Image modules
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(( $(nproc) * 2 )) allwinner/sun50i-h616-mangopi-mq-quad.dtb
 cd ..
 
 # Create image file
