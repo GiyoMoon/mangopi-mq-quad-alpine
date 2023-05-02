@@ -5,10 +5,8 @@ apt install -y git vim make gcc pkg-config zlib1g-dev libusb-1.0-0-dev libfdt-de
 
 # Clean up previous builds
 rm -rf ./build
-umount /mnt/rootfs
-umount /mnt/boot
-rm -rf /mnt/rootfs
-rm -rf /mnt/boot
+umount /mnt/alpine
+rm -rf /mnt/alpine
 losetup -d /dev/loop*
 
 mkdir ./build
@@ -44,9 +42,13 @@ sed -i '/source "drivers\/net\/wireless\/realtek\/rtw89\/Kconfig"/a source "driv
 cp ../../config/linux/sun50i-h616-mangopi-mq-quad.dts arch/arm64/boot/dts/allwinner/
 echo "dtb-\$(CONFIG_ARCH_SUNXI) += sun50i-h616-mangopi-mq-quad.dtb" >> ./arch/arm64/boot/dts/allwinner/Makefile
 
-
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+# Disable all modules except rtl8723ds
+sed -i -e '/=m/ s/^/# /; s/=m/ is not set/g' .config
 sed -i 's/# CONFIG_RTL8723DS is not set/CONFIG_RTL8723DS=m/g' .config
+sed -i 's/# CONFIG_CFG80211 is not set/CONFIG_CFG80211=m/g' .config
+sed -i 's/# CONFIG_RFKILL is not set/CONFIG_RFKILL=m/g' .config
+sed -i 's/# CONFIG_IPV6 is not set/CONFIG_IPV6=m/g' .config
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(( $(nproc) * 2 )) Image dtbs modules
 cd ..
 
@@ -87,18 +89,19 @@ cp ../../config/image/boot.cmd .
 
 mkimage -C none -A arm64 -T script -d boot.cmd boot.scr
 
+# Total size of the image = 512MB
+# One sector is 512 bytes big
+#
+# 664509 bytes      ./u-boot-sunxi-with-spl.bin
+# = 1298 sectors + 2048 = 3346 sector offset for partition 1
+
 dd if=/dev/zero of=./alpine.img bs=1M count=512
 
 fdisk ./alpine.img <<EEOF
 n
 p
 1
-40960
-+131072
-n
-p
-2
-172033
+3346
 
 w
 EEOF
@@ -107,32 +110,27 @@ losetup -f ./alpine.img
 
 dd if=./u-boot-sunxi-with-spl.bin of=/dev/loop0 bs=8K seek=1
 
-losetup -f -o 20971520 --sizelimit 67109376 alpine.img
-mkfs.fat /dev/loop1
+losetup -f -o 1713152 --sizelimit 535157248 alpine.img
+mkfs.ext4 /dev/loop1
 
-losetup -f -o 88080896 --sizelimit 448790016 alpine.img
-mkfs.ext4 /dev/loop2
+mkdir /mnt/alpine
+mount /dev/loop1 /mnt/alpine/
 
-mkdir /mnt/boot
-mkdir /mnt/rootfs
-mount /dev/loop1 /mnt/boot/
-mount /dev/loop2 /mnt/rootfs/
+mkdir /mnt/alpine/boot
+cp ./Image /mnt/alpine/boot/
+cp ./sun50i-h616-mangopi-mq-quad.dtb /mnt/alpine/boot/
+cp ./boot.scr /mnt/alpine/boot/
 
-cp ./Image /mnt/boot/
-cp ./sun50i-h616-mangopi-mq-quad.dtb /mnt/boot/
-cp ./boot.scr /mnt/boot/
-cp -r ./rootfs/* /mnt/rootfs/
+cp -r ./rootfs/* /mnt/alpine/
 
 cd ../linux
-make INSTALL_MOD_PATH=/mnt/rootfs modules_install
+make INSTALL_MOD_PATH=/mnt/alpine modules_install
 cd ../image
 
 sync
-umount /mnt/rootfs
-umount /mnt/boot
+umount /mnt/alpine
 
 losetup -d /dev/loop1
-losetup -d /dev/loop2
 losetup -d /dev/loop0
 
 cp ./alpine.img ../../
