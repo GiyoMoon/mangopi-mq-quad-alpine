@@ -1,13 +1,15 @@
 #!/bin/sh
 
+# Install required packages
 apt update
-apt install -y git vim make gcc pkg-config zlib1g-dev libusb-1.0-0-dev libfdt-dev libncurses-dev bison flex python3-setuptools swig python3-dev libssl-dev bc kmod rsync u-boot-tools gcc-aarch64-linux-gnu file wget cpio unzip fdisk dosfstools
+apt install -y git make gcc bison flex python3-dev python3-setuptools swig libssl-dev bc u-boot-tools fdisk kmod
+# Useful, but not required by the script
+apt install -y vim libncurses-dev
 
 # Clean up previous builds
 rm -rf ./build
 umount /mnt/alpine
 rm -rf /mnt/alpine
-losetup -d /dev/loop*
 
 mkdir ./build
 cd build
@@ -21,9 +23,12 @@ cd ..
 # Build u-boot
 git clone  --depth 1 git://git.denx.de/u-boot.git
 cd u-boot
-cp ../../config/u-boot/.config .
 rm drivers/power/axp305.c
 cp ../../config/u-boot/axp305.c drivers/power/
+make CROSS_COMPILE=aarch64-linux-gnu- BL31=../arm-trusted-firmware/build/sun50i_h616/debug/bl31.bin orangepi_zero2_defconfig
+sed -i 's/CONFIG_NET=y/# CONFIG_NET is not set/g' .config
+sed -i 's/CONFIG_BOOTDELAY=2/CONFIG_BOOTDELAY=-2/g' .config
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 make CROSS_COMPILE=aarch64-linux-gnu- BL31=../arm-trusted-firmware/build/sun50i_h616/debug/bl31.bin -j$(( $(nproc) * 2 ))
 cd ..
 
@@ -62,6 +67,7 @@ cp ../../config/rootfs/rootfs.tar .
 mkdir rootfs
 tar -xf ./rootfs.tar -C rootfs
 
+# Services which should start at boot
 ln -s /etc/init.d/modules ./rootfs/etc/runlevels/default/modules
 ln -s /etc/init.d/networking ./rootfs/etc/runlevels/default/networking
 ln -s /etc/init.d/sshd ./rootfs/etc/runlevels/default/sshd
@@ -91,13 +97,13 @@ cp ../../config/image/boot.cmd .
 
 mkimage -C none -A arm64 -T script -d boot.cmd boot.scr
 
-# Total size of the image = 512MB
+# Total size of the image = 100MB = 104857600 bytes = 204800 sectors
 # One sector is 512 bytes big
 #
 # 664509 bytes      ./u-boot-sunxi-with-spl.bin
 # = 1298 sectors + 2048 = 3346 sector offset for partition 1
 
-dd if=/dev/zero of=./alpine.img bs=1M count=512
+dd if=/dev/zero of=./alpine.img bs=1M count=100
 
 fdisk ./alpine.img <<EEOF
 n
@@ -108,15 +114,15 @@ p
 w
 EEOF
 
-losetup -f ./alpine.img
+imageloop=$(losetup -f --show ./alpine.img)
 
-dd if=./u-boot-sunxi-with-spl.bin of=/dev/loop0 bs=8K seek=1
+dd if=./u-boot-sunxi-with-spl.bin of=$imageloop bs=8K seek=1
 
-losetup -f -o 1713152 --sizelimit 535157248 alpine.img
-mkfs.ext4 /dev/loop1
+partitionloop=$(losetup -f --show -o 1713152 alpine.img)
+mkfs.ext4 $partitionloop
 
 mkdir /mnt/alpine
-mount /dev/loop1 /mnt/alpine/
+mount $partitionloop /mnt/alpine/
 
 mkdir /mnt/alpine/boot
 cp ./Image /mnt/alpine/boot/
@@ -132,7 +138,7 @@ cd ../image
 sync
 umount /mnt/alpine
 
-losetup -d /dev/loop1
-losetup -d /dev/loop0
+losetup -d $imageloop
+losetup -d $partitionloop
 
 cp ./alpine.img ../../
