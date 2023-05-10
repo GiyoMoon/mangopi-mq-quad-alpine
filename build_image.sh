@@ -7,6 +7,7 @@ apt install -y git make gcc bison flex python3-dev python3-setuptools swig libss
 apt install -y vim libncurses-dev
 
 # Clean up previous builds
+rm ./alpine.img
 rm -rf ./build
 umount /mnt/alpine
 rm -rf /mnt/alpine
@@ -54,6 +55,17 @@ sed -i 's/# CONFIG_RTL8723DS is not set/CONFIG_RTL8723DS=m/g' .config
 sed -i 's/# CONFIG_CFG80211 is not set/CONFIG_CFG80211=m/g' .config
 sed -i 's/# CONFIG_RFKILL is not set/CONFIG_RFKILL=m/g' .config
 sed -i 's/# CONFIG_IPV6 is not set/CONFIG_IPV6=m/g' .config
+
+# Enable crypto modules, required for iwd
+sed -i 's/# CONFIG_CRYPTO_USER_API_HASH is not set/CONFIG_CRYPTO_USER_API_HASH=y/g' .config
+sed -i 's/# CONFIG_CRYPTO_USER_API_SKCIPHER is not set/CONFIG_CRYPTO_USER_API_SKCIPHER=y/g' .config
+sed -i 's/# CONFIG_KEY_DH_OPERATIONS is not set/CONFIG_KEY_DH_OPERATIONS=y/g' .config
+sed -i 's/# CONFIG_CRYPTO_ECB is not set/CONFIG_CRYPTO_ECB=m/g' .config
+sed -i 's/# CONFIG_CRYPTO_MD5 is not set/CONFIG_CRYPTO_MD5=m/g' .config
+sed -i 's/# CONFIG_CRYPTO_CBC is not set/CONFIG_CRYPTO_CBC=m/g' .config
+sed -i 's/# CONFIG_CRYPTO_DES is not set/CONFIG_CRYPTO_DES=m/g' .config
+sed -i 's/# CONFIG_CRYPTO_CMAC is not set/CONFIG_CRYPTO_CMAC=m/g' .config
+
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(( $(nproc) * 2 )) Image dtbs modules
@@ -68,11 +80,12 @@ mkdir rootfs
 tar -xf ./rootfs.tar -C rootfs
 
 # Services which should start at boot
-ln -s /etc/init.d/modules ./rootfs/etc/runlevels/default/modules
-ln -s /etc/init.d/networking ./rootfs/etc/runlevels/default/networking
+ln -s /etc/init.d/modules ./rootfs/etc/runlevels/boot/modules
+ln -s /etc/init.d/networking ./rootfs/etc/runlevels/boot/networking
+ln -s /etc/init.d/iwd ./rootfs/etc/runlevels/boot/iwd
+ln -s /etc/init.d/chronyd ./rootfs/etc/runlevels/default/chronyd
 ln -s /etc/init.d/sshd ./rootfs/etc/runlevels/default/sshd
 ln -s /etc/init.d/local ./rootfs/etc/runlevels/default/local
-ln -s /etc/init.d/openntpd ./rootfs/etc/runlevels/default/openntpd
 
 cp ../../config/rootfs/init.start ./rootfs/etc/local.d/init.start
 chmod +x ./rootfs/etc/local.d/init.start

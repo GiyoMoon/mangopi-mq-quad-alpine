@@ -1,7 +1,21 @@
 #!/bin/sh
 
 ##############################
+# Grow partition 1 to take up all available space
+##############################
+growpart /dev/mmcblk0 1
+
+##############################
 # Set up wifi
 ##############################
-wpa_passphrase 'WIFI_SSID' 'WIFI_PASSWORD' > /etc/wpa_supplicant/wpa_supplicant.conf
-wpa_supplicant -Dnl80211 -iwlan0 -c/etc/wpa_supplicant/wpa_supplicant.conf -B
+iwctl station wlan0 connect WIFI_SSID --passphrase WIFI_PASSWORD
+ip route flush 0/0
+ip route add default via 10.0.0.1 dev wlan0
+rc-service chronyd restart
+
+##############################
+# Clean up
+##############################
+apk del cloud-utils-growpart
+rm /etc/runlevels/default/local
+rm /etc/local.d/init.start

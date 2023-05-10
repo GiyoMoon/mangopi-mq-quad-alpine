@@ -36,9 +36,9 @@ Not everything works yet. I'm trying to do/fix everything on this list.
   - [ ] Get HDMI working
   - [ ] Get the act LED working
 - [ ] Get SSH working
-- [ ] Fix filesystem
+- [x] Fix filesystem
   - [x] Correctly mount partition 1 to `/boot`
-  - [ ] Make partition 2 take up full SD card space
+  - [x] Make partition 1 take up full SD card space
 - [ ] Make sure that Alpine runs in diskless mode
 
 If you need anything else, feel free to open an issue and I will have a look.
