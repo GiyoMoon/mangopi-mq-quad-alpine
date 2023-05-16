@@ -1,9 +1,0 @@
-# SPDX-License-Identifier: GPL-2.0-only
-menuconfig RTW88
-	tristate "Realtek 802.11ac wireless chips support"
-	depends on MAC80211
-	help
-	  This module adds support for mac80211-based wireless drivers that
-	  enables Realtek IEEE 802.11ac wireless chipsets.
-
-	  If you choose to build a module, it'll be called rtw88.

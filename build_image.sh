@@ -37,22 +37,20 @@ cd ..
 git clone --depth 1 https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
 cd linux
 
-# Include driver for rtl8723ds
-git clone --depth 1 https://github.com/lwfinger/rtl8723ds ./drivers/net/wireless/realtek/rtl8723ds
-sed -i 's/---help---/help/g' ./drivers/net/wireless/realtek/rtl8723ds/Kconfig
-sed -i "s/^CONFIG_RTW_DEBUG.*/CONFIG_RTW_DEBUG = n/" ./drivers/net/wireless/realtek/rtl8723ds/Makefile
-echo "obj-\$(CONFIG_RTL8723DS) += rtl8723ds/" >> ./drivers/net/wireless/realtek/Makefile
-sed -i '/source "drivers\/net\/wireless\/realtek\/rtw89\/Kconfig"/a source "drivers\/net\/wireless\/realtek\/rtl8723ds\/Kconfig"' ./drivers/net/wireless/realtek/Kconfig
+# Include driver for rtw88
+rm -rf ./drivers/net/wireless/realtek/rtw88
+git clone --depth 1 https://github.com/GiyoMoon/rtw88 ./drivers/net/wireless/realtek/rtw88
 
 # Custom device tree reference for Mango Pi
 cp ../../config/linux/sun50i-h616-mangopi-mq-quad.dts arch/arm64/boot/dts/allwinner/
 echo "dtb-\$(CONFIG_ARCH_SUNXI) += sun50i-h616-mangopi-mq-quad.dtb" >> ./arch/arm64/boot/dts/allwinner/Makefile
 
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
-# Disable all modules except rtl8723ds
+# Disable all modules except rtw88
 sed -i -e '/=m/ s/^/# /; s/=m/ is not set/g' .config
-sed -i 's/# CONFIG_RTL8723DS is not set/CONFIG_RTL8723DS=m/g' .config
+sed -i 's/# CONFIG_RTW88 is not set/CONFIG_RTW88=m/g' .config
 sed -i 's/# CONFIG_CFG80211 is not set/CONFIG_CFG80211=m/g' .config
+sed -i 's/# CONFIG_MAC80211 is not set/CONFIG_MAC80211=m/g' .config
 sed -i 's/# CONFIG_RFKILL is not set/CONFIG_RFKILL=m/g' .config
 sed -i 's/# CONFIG_IPV6 is not set/CONFIG_IPV6=m/g' .config
 
@@ -99,9 +97,9 @@ sed -i 's/#ttyS0::respawn:\/sbin\/getty -L ttyS0 115200 vt100/ttyS0::respawn:\/s
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/g' ./rootfs/etc/ssh/sshd_config
 
 cp ../../config/rootfs/resolv.conf ./rootfs/etc/resolv.conf
-echo "8723ds" >> ./rootfs/etc/modules
-echo "Welcome to Alpine on Mango Pi!" >> ./rootfs/etc/motd
-echo "mangopi" >> ./rootfs/etc/hostname
+echo "rtw_8723ds" >> ./rootfs/etc/modules
+echo "Welcome to Alpine on Mango Pi!" > ./rootfs/etc/motd
+echo "mangopi" > ./rootfs/etc/hostname
 
 cp ../u-boot/u-boot-sunxi-with-spl.bin .
 cp ../linux/arch/arm64/boot/Image .
@@ -116,7 +114,7 @@ mkimage -C none -A arm64 -T script -d boot.cmd boot.scr
 # 664509 bytes      ./u-boot-sunxi-with-spl.bin
 # = 1298 sectors + 2048 = 3346 sector offset for partition 1
 
-dd if=/dev/zero of=./alpine.img bs=1M count=100
+dd if=/dev/zero of=./alpine.img bs=1M count=120
 
 fdisk ./alpine.img <<EEOF
 n
@@ -146,6 +144,8 @@ cp -r ./rootfs/* /mnt/alpine/
 
 cd ../linux
 make INSTALL_MOD_PATH=/mnt/alpine modules_install
+mkdir /mnt/alpine/lib/firmware/rtw88
+cp ./drivers/net/wireless/realtek/rtw88/rtw8723d_fw.bin /mnt/alpine/lib/firmware/rtw88
 cd ../image
 
 sync
