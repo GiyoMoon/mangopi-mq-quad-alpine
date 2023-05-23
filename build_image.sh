@@ -39,7 +39,7 @@ cd linux
 
 # Include driver for rtw88
 rm -rf ./drivers/net/wireless/realtek/rtw88
-git clone --depth 1 https://github.com/GiyoMoon/rtw88 ./drivers/net/wireless/realtek/rtw88
+git clone --depth 1 https://github.com/GiyoMoon/rtw88.git ./drivers/net/wireless/realtek/rtw88
 
 # Custom device tree reference for Mango Pi
 cp ../../config/linux/sun50i-h616-mangopi-mq-quad.dts arch/arm64/boot/dts/allwinner/
@@ -114,7 +114,7 @@ mkimage -C none -A arm64 -T script -d boot.cmd boot.scr
 # 664509 bytes      ./u-boot-sunxi-with-spl.bin
 # = 1298 sectors + 2048 = 3346 sector offset for partition 1
 
-dd if=/dev/zero of=./alpine.img bs=1M count=120
+dd if=/dev/zero of=./alpine.img bs=1M count=140
 
 fdisk ./alpine.img <<EEOF
 n
@@ -147,6 +147,9 @@ make INSTALL_MOD_PATH=/mnt/alpine modules_install
 mkdir /mnt/alpine/lib/firmware/rtw88
 cp ./drivers/net/wireless/realtek/rtw88/rtw8723d_fw.bin /mnt/alpine/lib/firmware/rtw88
 cd ../image
+
+# Mount devpts to enable pty
+echo "devpts          /dev/pts        devpts  rw        0 0" > /mnt/alpine/etc/fstab
 
 sync
 umount /mnt/alpine

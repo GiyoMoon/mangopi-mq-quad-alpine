@@ -4,6 +4,7 @@
 # Grow partition 1 to take up all available space
 ##############################
 growpart /dev/mmcblk0 1
+resize2fs /dev/mmcblk0p1
 
 ##############################
 # Set up wifi
@@ -17,5 +18,6 @@ rc-service chronyd restart
 # Clean up
 ##############################
 apk del cloud-utils-growpart
+apk del e2fsprogs-extra
 rm /etc/runlevels/default/local
 rm /etc/local.d/init.start
