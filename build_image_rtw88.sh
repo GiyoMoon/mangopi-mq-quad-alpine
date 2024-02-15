@@ -39,21 +39,32 @@ cd linux
 
 # Include driver for rtw88
 rm -rf ./drivers/net/wireless/realtek/rtw88
-git clone --depth 1 https://github.com/GiyoMoon/rtw88.git ./drivers/net/wireless/realtek/rtw88
+git clone --depth 1 https://github.com/lwfinger/rtw88.git ./drivers/net/wireless/realtek/rtw88
+rm -rf ./drivers/net/wireless/realtek/rtw88/alt_rtl8821ce
+cat <<EOT >> ./drivers/net/wireless/realtek/rtw88/Kconfig
+# SPDX-License-Identifier: GPL-2.0-only
+menuconfig RTW88
+	tristate "Realtek 802.11ac wireless chips support"
+	depends on MAC80211
+	help
+	  This module adds support for mac80211-based wireless drivers that
+	  enables Realtek IEEE 802.11ac wireless chipsets.
+
+	  If you choose to build a module, it'll be called rtw88.
+EOT
 
 # Custom device tree reference for Mango Pi
 cp ../../config/linux/sun50i-h616-mangopi-mq-quad.dts arch/arm64/boot/dts/allwinner/
 echo "dtb-\$(CONFIG_ARCH_SUNXI) += sun50i-h616-mangopi-mq-quad.dtb" >> ./arch/arm64/boot/dts/allwinner/Makefile
 
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
-# Disable all modules except rtw88 and spidev
+# Disable all modules except rtw88
 sed -i -e '/=m/ s/^/# /; s/=m/ is not set/g' .config
 sed -i 's/# CONFIG_RTW88 is not set/CONFIG_RTW88=m/g' .config
 sed -i 's/# CONFIG_CFG80211 is not set/CONFIG_CFG80211=m/g' .config
 sed -i 's/# CONFIG_MAC80211 is not set/CONFIG_MAC80211=m/g' .config
 sed -i 's/# CONFIG_RFKILL is not set/CONFIG_RFKILL=m/g' .config
 sed -i 's/# CONFIG_IPV6 is not set/CONFIG_IPV6=m/g' .config
-sed -i 's/# CONFIG_SPI_SPIDEV is not set/CONFIG_SPI_SPIDEV=m/g' .config
 
 # Enable crypto modules, required for iwd
 sed -i 's/# CONFIG_CRYPTO_USER_API_HASH is not set/CONFIG_CRYPTO_USER_API_HASH=y/g' .config
@@ -64,38 +75,6 @@ sed -i 's/# CONFIG_CRYPTO_MD5 is not set/CONFIG_CRYPTO_MD5=m/g' .config
 sed -i 's/# CONFIG_CRYPTO_CBC is not set/CONFIG_CRYPTO_CBC=m/g' .config
 sed -i 's/# CONFIG_CRYPTO_DES is not set/CONFIG_CRYPTO_DES=m/g' .config
 sed -i 's/# CONFIG_CRYPTO_CMAC is not set/CONFIG_CRYPTO_CMAC=m/g' .config
-
-# SPI tests
-sed -i 's/# CONFIG_SPI_LOOPBACK_TEST is not set/CONFIG_SPI_LOOPBACK_TEST=m/g' .config
-sed -i 's/# CONFIG_SPI_TLE62X0 is not set/CONFIG_SPI_TLE62X0=m/g' .config
-sed -i 's/# CONFIG_SPI_SLAVE is not set/CONFIG_SPI_SLAVE=y/g' .config
-echo "CONFIG_SPI_SLAVE_TIME=m" >> .config
-echo "CONFIG_SPI_SLAVE_SYSTEM_CONTROL=m" >> .config
-sed -i 's/# CONFIG_SPI_MUX is not set/CONFIG_SPI_MUX=m/g' .config
-sed -i 's/# CONFIG_SPI_MXIC is not set/CONFIG_SPI_MXIC=m/g' .config
-sed -i 's/# CONFIG_SPI_XCOMM is not set/CONFIG_SPI_XCOMM=m/g' .config
-sed -i 's/# CONFIG_SPI_XILINX is not set/CONFIG_SPI_XILINX=m/g' .config
-sed -i 's/# CONFIG_SPI_ZYNQMP_GQSPI is not set/CONFIG_SPI_ZYNQMP_GQSPI=m/g' .config
-sed -i 's/# CONFIG_SPI_AMD is not set/CONFIG_SPI_AMD=m/g' .config
-sed -i 's/CONFIG_SPI_ROCKCHIP=y/CONFIG_SPI_ROCKCHIP=m/g' .config
-sed -i 's/# CONFIG_SPI_SC18IS602 is not set/CONFIG_SPI_SC18IS602=m/g' .config
-sed -i 's/# CONFIG_SPI_SIFIVE is not set/CONFIG_SPI_SIFIVE=m/g' .config
-sed -i 's/# CONFIG_SPI_SUN4I is not set/CONFIG_SPI_SUN4I=y/g' .config
-sed -i 's/# CONFIG_SPI_ALTERA is not set/CONFIG_SPI_ALTERA=m/g' .config
-echo "CONFIG_SPI_ALTERA_CORE=m" >> .config
-sed -i 's/# CONFIG_SPI_AXI_SPI_ENGINE is not set/CONFIG_SPI_AXI_SPI_ENGINE=m/g' .config
-sed -i 's/# CONFIG_SPI_BITBANG is not set/CONFIG_SPI_BITBANG=m/g' .config
-sed -i 's/# CONFIG_SPI_CADENCE is not set/CONFIG_SPI_CADENCE=m/g' .config
-sed -i 's/CONFIG_SPI_CADENCE_QUADSPI=y/# CONFIG_SPI_CADENCE_QUADSPI is not set/g' .config
-sed -i 's/# CONFIG_SPI_CADENCE_XSPI is not set/CONFIG_SPI_CADENCE_XSPI=m/g' .config
-sed -i 's/# CONFIG_SPI_DESIGNWARE is not set/CONFIG_SPI_DESIGNWARE=m/g' .config
-sed -i 's/# CONFIG_SPI_DW_MMIO is not set/CONFIG_SPI_DW_MMIO=m/g' .config
-sed -i 's/CONFIG_SPI_NXP_FLEXSPI=y/CONFIG_SPI_NXP_FLEXSPI=m/g' .config
-sed -i 's/# CONFIG_SPI_GPIO is not set/CONFIG_SPI_GPIO=m/g' .config
-echo "CONFIG_SPI_FSL_LIB=m" >> .config
-sed -i 's/# CONFIG_SPI_FSL_SPI is not set/CONFIG_SPI_FSL_SPI=m/g' .config
-sed -i 's/# CONFIG_SPI_OC_TINY is not set/CONFIG_SPI_OC_TINY=m/g' .config
-
 
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
@@ -130,10 +109,7 @@ sed -i 's/#ttyS0::respawn:\/sbin\/getty -L ttyS0 115200 vt100/ttyS0::respawn:\/s
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/g' ./rootfs/etc/ssh/sshd_config
 
 cp ../../config/rootfs/resolv.conf ./rootfs/etc/resolv.conf
-
 echo "rtw_8723ds" >> ./rootfs/etc/modules
-echo "spidev" >> ./rootfs/etc/modules
-
 echo "Welcome to Alpine on Mango Pi!" > ./rootfs/etc/motd
 echo "mangopi" > ./rootfs/etc/hostname
 
@@ -186,8 +162,6 @@ cd ../image
 
 # Mount devpts to enable pty
 echo "devpts          /dev/pts        devpts  rw        0 0" > /mnt/alpine/etc/fstab
-# Mount sysfs
-echo "sysfs          /sys             sysfs   rw        0 0" >> /mnt/alpine/etc/fstab
 
 sync
 umount /mnt/alpine
@@ -196,5 +170,3 @@ losetup -d $imageloop
 losetup -d $partitionloop
 
 cp ./alpine.img ../../
-
-cd ../../

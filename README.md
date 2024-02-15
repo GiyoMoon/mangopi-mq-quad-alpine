@@ -6,7 +6,7 @@ This repository provides configs and a script to compile the Linux kernel + Alpi
 ### Prerequisites
 - Uses `apt` to install the required packages, should work on Ubuntu and Debian, I only tested it on Debian
 - The scripts needs access to the `/dev/loop*` files to create the image
-- It uses `/mnt/boot` and `/mnt/rootfs` as mounting points, make sure these folders are unused
+- It uses `/mnt/alpine` as mounting point, make sure this folder is unused
 ### Running the script
 ⚠️ You run this script at your own risk.
 ```shell
@@ -35,7 +35,7 @@ Not everything works yet. I'm trying to do/fix everything on this list.
   - [ ] Get SPI working
   - [ ] Get HDMI working
   - [ ] Get the act LED working
-- [ ] Get SSH working
+- [x] Get SSH working
 - [x] Fix filesystem
   - [x] Correctly mount partition 1 to `/boot`
   - [x] Make partition 1 take up full SD card space

@@ -1,49 +1,10 @@
-#!/bin/sh
+rm -rf ./build/image
+rm alpine.img
 
-# Install required packages
-apt update
-apt install -y git make gcc bison flex python3-dev python3-setuptools swig libssl-dev bc u-boot-tools fdisk kmod
-# Useful, but not required by the script
-apt install -y vim libncurses-dev
-
-# Clean up previous builds
-rm ./alpine.img
-rm -rf ./build
-umount /mnt/alpine
-rm -rf /mnt/alpine
-
-mkdir ./build
-cd build
-
-# Build bl31 for u-boot
-git clone  --depth 1 https://github.com/ARM-software/arm-trusted-firmware.git
-cd arm-trusted-firmware
-make CROSS_COMPILE=aarch64-linux-gnu- PLAT=sun50i_h616 DEBUG=1 bl31
-cd ..
-
-# Build u-boot
-git clone  --depth 1 git://git.denx.de/u-boot.git
-cd u-boot
-rm drivers/power/axp305.c
-cp ../../config/u-boot/axp305.c drivers/power/
-make CROSS_COMPILE=aarch64-linux-gnu- BL31=../arm-trusted-firmware/build/sun50i_h616/debug/bl31.bin orangepi_zero2_defconfig
-sed -i 's/CONFIG_NET=y/# CONFIG_NET is not set/g' .config
-sed -i 's/CONFIG_BOOTDELAY=2/CONFIG_BOOTDELAY=-2/g' .config
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-make CROSS_COMPILE=aarch64-linux-gnu- BL31=../arm-trusted-firmware/build/sun50i_h616/debug/bl31.bin -j$(( $(nproc) * 2 ))
-cd ..
-
-# Build linux kernel
-git clone --depth 1 https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
-cd linux
-
-# Include driver for rtw88
-rm -rf ./drivers/net/wireless/realtek/rtw88
-git clone --depth 1 https://github.com/GiyoMoon/rtw88.git ./drivers/net/wireless/realtek/rtw88
-
-# Custom device tree reference for Mango Pi
+cd ./build/linux
+rm arch/arm64/boot/dts/allwinner/sun50i-h616-mangopi-mq-quad.dts
 cp ../../config/linux/sun50i-h616-mangopi-mq-quad.dts arch/arm64/boot/dts/allwinner/
-echo "dtb-\$(CONFIG_ARCH_SUNXI) += sun50i-h616-mangopi-mq-quad.dtb" >> ./arch/arm64/boot/dts/allwinner/Makefile
+
 
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
 # Disable all modules except rtw88 and spidev
@@ -64,38 +25,6 @@ sed -i 's/# CONFIG_CRYPTO_MD5 is not set/CONFIG_CRYPTO_MD5=m/g' .config
 sed -i 's/# CONFIG_CRYPTO_CBC is not set/CONFIG_CRYPTO_CBC=m/g' .config
 sed -i 's/# CONFIG_CRYPTO_DES is not set/CONFIG_CRYPTO_DES=m/g' .config
 sed -i 's/# CONFIG_CRYPTO_CMAC is not set/CONFIG_CRYPTO_CMAC=m/g' .config
-
-# SPI tests
-sed -i 's/# CONFIG_SPI_LOOPBACK_TEST is not set/CONFIG_SPI_LOOPBACK_TEST=m/g' .config
-sed -i 's/# CONFIG_SPI_TLE62X0 is not set/CONFIG_SPI_TLE62X0=m/g' .config
-sed -i 's/# CONFIG_SPI_SLAVE is not set/CONFIG_SPI_SLAVE=y/g' .config
-echo "CONFIG_SPI_SLAVE_TIME=m" >> .config
-echo "CONFIG_SPI_SLAVE_SYSTEM_CONTROL=m" >> .config
-sed -i 's/# CONFIG_SPI_MUX is not set/CONFIG_SPI_MUX=m/g' .config
-sed -i 's/# CONFIG_SPI_MXIC is not set/CONFIG_SPI_MXIC=m/g' .config
-sed -i 's/# CONFIG_SPI_XCOMM is not set/CONFIG_SPI_XCOMM=m/g' .config
-sed -i 's/# CONFIG_SPI_XILINX is not set/CONFIG_SPI_XILINX=m/g' .config
-sed -i 's/# CONFIG_SPI_ZYNQMP_GQSPI is not set/CONFIG_SPI_ZYNQMP_GQSPI=m/g' .config
-sed -i 's/# CONFIG_SPI_AMD is not set/CONFIG_SPI_AMD=m/g' .config
-sed -i 's/CONFIG_SPI_ROCKCHIP=y/CONFIG_SPI_ROCKCHIP=m/g' .config
-sed -i 's/# CONFIG_SPI_SC18IS602 is not set/CONFIG_SPI_SC18IS602=m/g' .config
-sed -i 's/# CONFIG_SPI_SIFIVE is not set/CONFIG_SPI_SIFIVE=m/g' .config
-sed -i 's/# CONFIG_SPI_SUN4I is not set/CONFIG_SPI_SUN4I=y/g' .config
-sed -i 's/# CONFIG_SPI_ALTERA is not set/CONFIG_SPI_ALTERA=m/g' .config
-echo "CONFIG_SPI_ALTERA_CORE=m" >> .config
-sed -i 's/# CONFIG_SPI_AXI_SPI_ENGINE is not set/CONFIG_SPI_AXI_SPI_ENGINE=m/g' .config
-sed -i 's/# CONFIG_SPI_BITBANG is not set/CONFIG_SPI_BITBANG=m/g' .config
-sed -i 's/# CONFIG_SPI_CADENCE is not set/CONFIG_SPI_CADENCE=m/g' .config
-sed -i 's/CONFIG_SPI_CADENCE_QUADSPI=y/# CONFIG_SPI_CADENCE_QUADSPI is not set/g' .config
-sed -i 's/# CONFIG_SPI_CADENCE_XSPI is not set/CONFIG_SPI_CADENCE_XSPI=m/g' .config
-sed -i 's/# CONFIG_SPI_DESIGNWARE is not set/CONFIG_SPI_DESIGNWARE=m/g' .config
-sed -i 's/# CONFIG_SPI_DW_MMIO is not set/CONFIG_SPI_DW_MMIO=m/g' .config
-sed -i 's/CONFIG_SPI_NXP_FLEXSPI=y/CONFIG_SPI_NXP_FLEXSPI=m/g' .config
-sed -i 's/# CONFIG_SPI_GPIO is not set/CONFIG_SPI_GPIO=m/g' .config
-echo "CONFIG_SPI_FSL_LIB=m" >> .config
-sed -i 's/# CONFIG_SPI_FSL_SPI is not set/CONFIG_SPI_FSL_SPI=m/g' .config
-sed -i 's/# CONFIG_SPI_OC_TINY is not set/CONFIG_SPI_OC_TINY=m/g' .config
-
 
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
@@ -130,10 +59,8 @@ sed -i 's/#ttyS0::respawn:\/sbin\/getty -L ttyS0 115200 vt100/ttyS0::respawn:\/s
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/g' ./rootfs/etc/ssh/sshd_config
 
 cp ../../config/rootfs/resolv.conf ./rootfs/etc/resolv.conf
-
 echo "rtw_8723ds" >> ./rootfs/etc/modules
 echo "spidev" >> ./rootfs/etc/modules
-
 echo "Welcome to Alpine on Mango Pi!" > ./rootfs/etc/motd
 echo "mangopi" > ./rootfs/etc/hostname
 
@@ -186,8 +113,6 @@ cd ../image
 
 # Mount devpts to enable pty
 echo "devpts          /dev/pts        devpts  rw        0 0" > /mnt/alpine/etc/fstab
-# Mount sysfs
-echo "sysfs          /sys             sysfs   rw        0 0" >> /mnt/alpine/etc/fstab
 
 sync
 umount /mnt/alpine
