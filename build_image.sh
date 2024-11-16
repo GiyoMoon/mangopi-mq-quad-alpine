@@ -2,7 +2,7 @@
 
 # Install required packages
 apt update
-apt install -y git make gcc bison flex python3-dev python3-setuptools swig libssl-dev bc u-boot-tools fdisk kmod
+apt install -y git make gcc bison flex python3-dev python3-setuptools swig libssl-dev bc u-boot-tools fdisk kmod gcc-aarch64-linux-gnu
 # Useful, but not required by the script
 apt install -y vim libncurses-dev
 
